@@ -1,0 +1,364 @@
+Resources:
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:        
+      CidrBlock: 10.33.0.0/16
+      EnableDnsHostnames: false
+      EnableDnsSupport: false
+      Tags:
+        - Key: Name
+          Value: sample-dev-vpc
+  SubnetPrivate1a:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: Vpc
+      AvailabilityZone: ap-northeast-1a
+      CidrBlock: 10.33.11.0/24
+      Tags:
+        - Key: Name
+          Value: sample-dev-subnet-private-1a
+  SubnetApp1a:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: Vpc
+      AvailabilityZone: ap-northeast-1a
+      CidrBlock: 10.33.21.0/24
+      Tags:
+        - Key: Name
+          Value: sample-dev-subnet-app-1a
+  SubnetDb1a:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: Vpc
+      AvailabilityZone: ap-northeast-1a
+      CidrBlock: 10.33.31.0/24
+      Tags:
+        - Key: Name
+          Value: sample-dev-subnet-db-1a
+  SubnetDb1c:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: Vpc
+      AvailabilityZone: ap-northeast-1c
+      CidrBlock: 10.33.32.0/24
+      Tags:
+        - Key: Name
+          Value: sample-dev-subnet-db-1c
+  RouteTablePrivate1a:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: Vpc
+      Tags:
+        - Key: Name
+          Value: sample-dev-routetable-private-1a
+  RouteTableApp1a:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: Vpc
+      Tags:
+        - Key: Name
+          Value: sample-dev-routetable-app-1a
+  RouteTableDb1a:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: Vpc
+      Tags:
+        - Key: Name
+          Value: sample-dev-routetable-db-1a
+  RouteTableDb1c:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: Vpc
+      Tags:
+        - Key: Name
+          Value: sample-dev-routetable-db-1c
+  SecurityGroupPrivate1a:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: for Private
+      GroupName: sample-dev-securitygroup-private-1a
+      SecurityGroupIngress:
+        - FromPort: 443
+          IpProtocol: tcp
+          ToPort: 443
+      Tags:
+        - Key: Name
+          Value: sample-dev-securitygroup-private-1a
+      VpcId:
+        Ref: Vpc
+  SecurityGroupApp1a:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: for Application
+      GroupName: sample-dev-securitygroup-app-1a
+      SecurityGroupIngress:
+        - FromPort: 443
+          IpProtocol: tcp
+          SourceSecurityGroupId:
+            Fn::GetAtt:
+              - SecurityGroupPrivate1a
+              - GroupId
+          ToPort: 443
+      Tags:
+        - Key: Name
+          Value: sample-dev-securitygroup-app-1a
+      VpcId:
+        Ref: Vpc
+  SecurityGroupDb:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: for RDS
+      GroupName: sample-dev-securitygroup-db
+      SecurityGroupIngress:
+        - FromPort: 5432
+          IpProtocol: tcp
+          SourceSecurityGroupId:
+            Fn::GetAtt:
+              - SecurityGroupApp1a
+              - GroupId
+          ToPort: 5432
+      Tags:
+        - Key: Name
+          Value: sample-dev-securitygroup-db
+      VpcId:
+        Ref: Vpc
+  NetworkAclPrivate:
+    Type: AWS::EC2::NetworkAcl
+    Properties:
+      VpcId:
+        Ref: Vpc
+      Tags:
+        - Key: Name
+          Value: sample-dev-networkacl-private-1a
+  NetworkAclEntryInboundPrivate:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId:
+        Fn::GetAtt:
+          - NetworkAclPrivate
+          - Id
+      Protocol: -1
+      RuleAction: allow
+      RuleNumber: 100
+      CidrBlock: 0.0.0.0/0
+      Egress: false
+  NetworkAclEntryOutboundPrivate:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId:
+        Fn::GetAtt:
+          - NetworkAclPrivate
+          - Id
+      Protocol: -1
+      RuleAction: allow
+      RuleNumber: 100
+      CidrBlock: 0.0.0.0/0
+      Egress: true
+  NetworkAssociationPrivate:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      NetworkAclId:
+        Fn::GetAtt:
+          - NetworkAclPrivate
+          - Id
+      SubnetId:
+        Ref: SubnetPrivate1a
+  NetworkAclApp:
+    Type: AWS::EC2::NetworkAcl
+    Properties:
+      VpcId:
+        Ref: Vpc
+      Tags:
+        - Key: Name
+          Value: sample-dev-networkacl-app-1a
+  NetworkAclEntryInboundApp:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId:
+        Fn::GetAtt:
+          - NetworkAclApp
+          - Id
+      Protocol: -1
+      RuleAction: allow
+      RuleNumber: 100
+      CidrBlock: 0.0.0.0/0
+      Egress: false
+  NetworkAclEntryOutboundApp:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId:
+        Fn::GetAtt:
+          - NetworkAclApp
+          - Id
+      Protocol: -1
+      RuleAction: allow
+      RuleNumber: 100
+      CidrBlock: 0.0.0.0/0
+      Egress: true
+  NetworkAssociationApp:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      NetworkAclId:
+        Fn::GetAtt:
+          - NetworkAclApp
+          - Id
+      SubnetId:
+        Ref: SubnetApp1a
+  NetworkAclDb1a:
+    Type: AWS::EC2::NetworkAcl
+    Properties:
+      VpcId:
+        Ref: Vpc
+      Tags:
+        - Key: Name
+          Value: sample-dev-networkacl-db-1a
+  NetworkAclEntryInboundDb1a:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId:
+        Fn::GetAtt:
+          - NetworkAclDb1a
+          - Id
+      Protocol: -1
+      RuleAction: allow
+      RuleNumber: 100
+      CidrBlock: 0.0.0.0/0
+      Egress: false
+  NetworkAclEntryOutboundDb1a:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId:
+        Fn::GetAtt:
+          - NetworkAclDb1a
+          - Id
+      Protocol: -1
+      RuleAction: allow
+      RuleNumber: 100
+      CidrBlock: 0.0.0.0/0
+      Egress: true
+  NetworkAssociationDb1a:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      NetworkAclId:
+        Fn::GetAtt:
+          - NetworkAclDb1a
+          - Id
+      SubnetId:
+        Ref: SubnetDb1a
+  NetworkAclDb1c:
+    Type: AWS::EC2::NetworkAcl
+    Properties:
+      VpcId:
+        Ref: Vpc
+      Tags:
+        - Key: Name
+          Value: sample-dev-networkacl-db-1c
+  NetworkAclEntryInboundDb1c:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId:
+        Fn::GetAtt:
+          - NetworkAclDb1c
+          - Id
+      Protocol: -1
+      RuleAction: allow
+      RuleNumber: 100
+      CidrBlock: 0.0.0.0/0
+      Egress: false
+  NetworkAclEntryOutboundDb1c:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId:
+        Fn::GetAtt:
+          - NetworkAclDb1c
+          - Id
+      Protocol: -1
+      RuleAction: allow
+      RuleNumber: 100
+      CidrBlock: 0.0.0.0/0
+      Egress: true
+  NetworkAssociationDb1c:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      NetworkAclId:
+        Fn::GetAtt:
+          - NetworkAclDb1c
+          - Id
+      SubnetId:
+        Ref: SubnetDb1c
+  RdsDbClusterParameterGroup:
+    Type: AWS::RDS::DBClusterParameterGroup
+    Properties:
+      Description: Cluster Parameter for RDS
+      Family: aurora-postgresql13
+      Parameters:
+        apg_ccm_enabled: false
+  RdsDbSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet Grouop for RDS
+      SubnetIds:
+        - Ref: SubnetDb1a
+        - Ref: SubnetDb1c
+      DBSubnetGroupName: sample-dev-subnetgroup-rds
+  RdsDbCluster:
+    Type: AWS::RDS::DBCluster
+    Properties:
+      Engine: aurora-postgresql
+      BackupRetentionPeriod: 1
+      DatabaseName: SAMPLE
+      DBClusterIdentifier: sample-dev-rds-cluster
+      DBClusterParameterGroupName:
+        Ref: RdsDbClusterParameterGroup
+      DBSubnetGroupName:
+        Ref: RdsDbSubnetGroup
+      EnableCloudwatchLogsExports:
+        - postgresql
+      EngineMode: provisioned
+      EngineVersion: "13.6"
+      MasterUsername: sampleadmin
+      MasterUserPassword: sampleadmin
+      Port: 5432
+      VpcSecurityGroupIds:
+        - Fn::GetAtt:
+            - SecurityGroupDb
+            - GroupId
+  RdsDbInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceClass: db.t3.medium
+      AutoMinorVersionUpgrade: false
+      AvailabilityZone: ap-northeast-1a
+      DBClusterIdentifier:
+        Ref: RdsDbCluster
+      DBInstanceIdentifier: sample-dev-rds-instance-1a
+      DBSubnetGroupName:
+        Ref: RdsDbSubnetGroup
+      EnablePerformanceInsights: false
+      Engine: aurora-postgresql
+Parameters:
+  BootstrapVersion:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /cdk-bootstrap/hnb659fds/version
+    Description: Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]
+Rules:
+  CheckBootstrapVersion:
+    Assertions:
+      - Assert:
+          Fn::Not:
+            - Fn::Contains:
+                - - "1"
+                  - "2"
+                  - "3"
+                  - "4"
+                  - "5"
+                - Ref: BootstrapVersion
+        AssertDescription: CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI.
